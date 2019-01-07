@@ -121,7 +121,9 @@ var UltraPickerIOS = /** @class */ (function (_super) {
                         var nativeGroup = {
                             items: group_1,
                             fontFamily: child.props.fontFamily,
-                            fontSize: child.props.fontSize
+                            fontSize: child.props.fontSize,
+                            appendix: child.props.appendix,
+                            width: child.props.width
                         };
                         components.push(nativeGroup);
                         selectedIndexes.push(groupSelectedItem_1);

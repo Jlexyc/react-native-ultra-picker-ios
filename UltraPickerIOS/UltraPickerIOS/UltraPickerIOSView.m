@@ -12,15 +12,41 @@
 
 @end
 
-NSInteger const UIPickerDefaultFontSize = 17.0;
+CGFloat const UIPickerDefaultFontSize = 17.0;
 NSString const *UIPickerDefaultFontFamily = @"HelveticaNeue";
 
 @implementation UltraPickerIOSView
+
+NSArray *_appendixViews;
+CGFloat _widthForComponents;
 
 - (void) setComponentsData:(NSArray *)componentsData
 {
     if (componentsData != _componentsData) {
         _componentsData = [componentsData copy];
+        _widthForComponents = 0;
+        NSMutableArray *tempArray = [NSMutableArray new];
+        if ([_appendixViews isKindOfClass:[NSArray class]]) {
+            [_appendixViews makeObjectsPerformSelector:@selector(removeFromSuperview)];
+        }
+        for (NSDictionary *item in componentsData) {
+            NSString *groupFontFamily = [item valueForKey:@"fontFamily"];
+            NSString *groupFontSize = [item valueForKey:@"fontSize"];
+            CGFloat groupWidth = [[item valueForKey:@"width"] floatValue];
+            NSString *fontName = groupFontFamily ?: UIPickerDefaultFontFamily;
+            float fontSize = groupFontSize.floatValue > 0 ? groupFontSize.floatValue : UIPickerDefaultFontSize;
+            UILabel *label = [UILabel new];
+            label.font = [UIFont fontWithName:fontName size:fontSize];
+            label.text = [item valueForKey:@"appendix"];
+            label.textAlignment = NSTextAlignmentRight;
+            label.frame = CGRectMake(0, 0, groupWidth, fontSize);
+            [tempArray addObject:label];
+            [self addSubview:label];
+            _widthForComponents += groupWidth;
+        }
+        NSLog(@"WIDTH FOR COMPONENTS: %f", _widthForComponents);
+        _appendixViews = [NSArray arrayWithArray:tempArray];
+        
         [self setNeedsLayout];
         
         if (self.selectedIndexes) {
@@ -81,17 +107,38 @@ NSString const *UIPickerDefaultFontFamily = @"HelveticaNeue";
 
 -(UIView *)pickerView:(UIPickerView *)pickerView viewForRow:(NSInteger)row forComponent:(NSInteger)component reusingView:(UIView *)view {
     
+    UIView *textContainer;
     UILabel *displayLabel;
     
     if (view) {
-        displayLabel = (UILabel *)view;
-    }else {
+        textContainer = view;
+        displayLabel = (UILabel *)[[view subviews] objectAtIndex:0];
+    } else {
         displayLabel = [UILabel new];
+        textContainer = [UIView new];
         displayLabel.textAlignment = NSTextAlignmentCenter;
+        [textContainer addSubview:displayLabel];
     }
     
+    NSString *groupFontFamily = [[self.componentsData objectAtIndex:component] valueForKey:@"fontFamily"];
+    NSString *groupFontSize = [[self.componentsData objectAtIndex:component] valueForKey:@"fontSize"];
+    
+    CGRect labelRect = [[[self.componentsData objectAtIndex:component] valueForKey:@"appendix"]
+                        boundingRectWithSize:CGSizeMake(200, 0)
+                        options:NSStringDrawingUsesLineFragmentOrigin
+                        attributes:@{
+                                     NSFontAttributeName : [UIFont fontWithName:groupFontFamily size:groupFontSize.doubleValue]
+                                     }
+                        context:nil];
+
+    CGFloat width = [self pickerView:self widthForComponent:component];
+    CGFloat height = [self pickerView:self widthForComponent:component];
+    textContainer.bounds = CGRectMake(0, 0, width, height);
+    displayLabel.frame = CGRectMake(0, 0, width - labelRect.size.width - sectionOffset, height);
+    displayLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    
     NSString *fontName;
-    NSInteger fontSize;
+    CGFloat fontSize;
     UIFont *font = nil;
     
     //Check for property on the Item first, then the Group
@@ -100,12 +147,10 @@ NSString const *UIPickerDefaultFontFamily = @"HelveticaNeue";
     
     if (itemFontFamily != nil || itemFontSize != nil) {
         fontName = itemFontFamily ?: UIPickerDefaultFontFamily;
-        fontSize = itemFontSize.integerValue > 0 ? itemFontSize.integerValue : UIPickerDefaultFontSize;
+        fontSize = itemFontSize.integerValue > 0 ? itemFontSize.doubleValue : UIPickerDefaultFontSize;
     }else {
-        NSString *groupFontFamily = [[self.componentsData objectAtIndex:component] valueForKey:@"fontFamily"];
-        NSString *groupFontSize = [[self.componentsData objectAtIndex:component] valueForKey:@"fontSize"];
         fontName = groupFontFamily ?: UIPickerDefaultFontFamily;
-        fontSize = groupFontSize.integerValue > 0 ? groupFontSize.integerValue : UIPickerDefaultFontSize;
+        fontSize = groupFontSize.integerValue > 0 ? groupFontSize.doubleValue : UIPickerDefaultFontSize;
     }
     
     font = [UIFont fontWithName:fontName size:fontSize];
@@ -116,7 +161,7 @@ NSString const *UIPickerDefaultFontFamily = @"HelveticaNeue";
     
     displayLabel.text = [self labelForRow:row forComponent:component];
     
-    return displayLabel;
+    return textContainer;
 }
 
 - (NSString *)valueForRow:(NSInteger)row forComponent:(NSInteger)component
@@ -143,4 +188,26 @@ NSString const *UIPickerDefaultFontFamily = @"HelveticaNeue";
     }
 }
 
+- (CGFloat)pickerView:(UIPickerView *)pickerView widthForComponent:(NSInteger)component {
+    CGFloat width = [[[self.componentsData objectAtIndex:component] valueForKey:@"width"] doubleValue];
+    if (!width) {
+        return 40;
+    } else {
+        return width;
+    }
+}
+
+- (void) layoutSubviews {
+    [super layoutSubviews];
+    NSUInteger count = 0;
+    CGFloat xOffset = (self.frame.size.width - _widthForComponents) / 2;
+    for (UILabel *label in _appendixViews) {
+        CGRect frame = label.frame;
+        frame.origin.x = xOffset;
+        frame.origin.y = (self.frame.size.height / 2) - (label.font.pointSize / 2);
+        label.frame = frame;
+        xOffset += frame.size.width;
+        count++;
+    }
+}
 @end
