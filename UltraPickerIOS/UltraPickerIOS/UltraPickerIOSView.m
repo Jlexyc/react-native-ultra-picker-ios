@@ -130,11 +130,11 @@ CGFloat _widthForComponents;
                                      NSFontAttributeName : [UIFont fontWithName:groupFontFamily size:groupFontSize.doubleValue]
                                      }
                         context:nil];
-
+    
     CGFloat width = [self pickerView:self widthForComponent:component];
     CGFloat height = [self pickerView:self widthForComponent:component];
     textContainer.bounds = CGRectMake(0, 0, width, height);
-    displayLabel.frame = CGRectMake(0, 0, width - labelRect.size.width - sectionOffset, height);
+    displayLabel.frame = CGRectMake(0, 0, width - labelRect.size.width, height);
     displayLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     
     NSString *fontName;
@@ -154,7 +154,7 @@ CGFloat _widthForComponents;
     }
     
     font = [UIFont fontWithName:fontName size:fontSize];
-
+    
     if (font) {
         displayLabel.font = font;
     }
